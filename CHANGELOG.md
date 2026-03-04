@@ -1,5 +1,15 @@
 ﻿# Changelog
 
+## v1.3 - 2026-03-04
+
+- Fix Unicode/codepage failures when running under WSL
+- MSBuild pipe output now uses explicit OEM→Unicode conversion (`MultiByteToWideChar` with `CP_OEMCP`) instead of implicit `AnsiString` cast that depended on process codepage
+- Replace `WriteLn` with explicit UTF-8 `WriteFile` for stdout/stderr to avoid codepage mismatch exceptions
+- Source context extraction now always uses UTF-8 encoding instead of ANSI (which fails under WSL)
+- Escape non-ASCII characters in JSON output (`Ord(C) > 127`) to ensure valid JSON regardless of terminal encoding
+- Broaden compiler message regex to accept any file extension (was limited to `.pas/.dpr/.dpk/.inc`)
+- Add try-except around source context reading to gracefully skip files with encoding issues
+
 ## v1.2 - 2026-02-19
 
 - Switch delphi-lookup integration from text parsing to JSON (`--json` flag)
