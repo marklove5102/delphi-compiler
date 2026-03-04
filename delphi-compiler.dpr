@@ -3,6 +3,7 @@ program DelphiCompiler;
 {$APPTYPE CONSOLE}
 
 uses
+  Winapi.Windows,
   System.SysUtils,
   System.Diagnostics,
   Compilar.Types in 'Compilar.Types.pas',
@@ -15,6 +16,28 @@ uses
   Compilar.Context in 'Compilar.Context.pas',
   Compilar.ProjectInfo in 'Compilar.ProjectInfo.pas',
   Compilar.Output in 'Compilar.Output.pas';
+
+  procedure WriteStdout(const S: string);
+  var
+    Bytes: TBytes;
+    Handle: THandle;
+    Written: DWORD;
+  begin
+    Handle := GetStdHandle(STD_OUTPUT_HANDLE);
+    Bytes := TEncoding.UTF8.GetBytes(S + sLineBreak);
+    WriteFile(Handle, Bytes[0], Length(Bytes), Written, nil);
+  end;
+
+  procedure WriteStderr(const S: string);
+  var
+    Bytes: TBytes;
+    Handle: THandle;
+    Written: DWORD;
+  begin
+    Handle := GetStdHandle(STD_ERROR_HANDLE);
+    Bytes := TEncoding.UTF8.GetBytes(S + sLineBreak);
+    WriteFile(Handle, Bytes[0], Length(Bytes), Written, nil);
+  end;
 
 var
   Args: TCompilerArgs;
@@ -30,11 +53,12 @@ var
   OutputWinPath: string;
   OutputFileTime: TDateTime;
 begin
+
   try
     // 1. Parse command line arguments
     if not TArgsParser.Parse(Args, ParseError) then
     begin
-      Writeln(TJSONOutput.Invalid(ParseError));
+      WriteStdout(TJSONOutput.Invalid(ParseError));
       ExitCode := 0;
       Exit;
     end;
@@ -48,7 +72,7 @@ begin
 
     if not TMSBuildRunner.Execute(Args, MSBuildOutput, MSBuildExitCode) then
     begin
-      Writeln(TJSONOutput.InternalError('MSBuild execution failed'));
+      WriteStdout(TJSONOutput.InternalError('MSBuild execution failed'));
       ExitCode := 0;
       Exit;
     end;
@@ -58,9 +82,9 @@ begin
     // 3b. Echo raw output if requested
     if Args.RawOutput then
     begin
-      Writeln(ErrOutput, '--- MSBuild Raw Output (ExitCode=' + IntToStr(MSBuildExitCode) + ', Len=' + IntToStr(Length(MSBuildOutput)) + ') ---');
-      Writeln(ErrOutput, MSBuildOutput);
-      Writeln(ErrOutput, '--- End Raw Output ---');
+      WriteStderr('--- MSBuild Raw Output (ExitCode=' + IntToStr(MSBuildExitCode) + ', Len=' + IntToStr(Length(MSBuildOutput)) + ') ---');
+      WriteStderr(MSBuildOutput);
+      WriteStderr('--- End Raw Output ---');
     end;
 
     // 4. Parse MSBuild output (with truncation tracking)
@@ -98,13 +122,13 @@ begin
     end;
 
     // 8. Output JSON
-    Writeln(TJSONOutput.Generate(Result));
+    WriteStdout(TJSONOutput.Generate(Result));
     ExitCode := 0;
 
   except
     on E: Exception do
     begin
-      Writeln(TJSONOutput.InternalError(E.Message));
+      WriteStdout(TJSONOutput.InternalError(E.Message));
       ExitCode := 0;
     end;
   end;

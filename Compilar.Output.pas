@@ -61,7 +61,7 @@ begin
         #12: SB.Append('\f');
         #13: SB.Append('\r');
       else
-        if (Ord(C) < 32) then
+        if (Ord(C) < 32) or (Ord(C) > 127) then
           SB.Append(Format('\u%4.4x', [Ord(C)]))
         else
           SB.Append(C);

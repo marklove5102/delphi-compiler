@@ -33,11 +33,12 @@ const
   // W:\Path\File.pas(123): Warning W1000: Symbol 'Bar' is deprecated
   // SynTest.dpr(5): error F1026: File not found: 'mormot.defines.inc' [W:\...\SynTest.dproj]
   // TestHint.dpr(6): Hint warning H2164: Variable 'UnusedVar' is declared but never used [...]
-  // Supports: .pas, .dpr, .dpk, .inc files
+  // CodeGear.Delphi.Targets(427,5): error E2202: Required package 'rbProMAX' not found [...]
+  // Supports any file extension (the error code pattern is specific enough)
   // Handles optional MSBuild project suffix: [path\to\project.dproj]
   // Note: Hints use "Hint warning" prefix, not just "Hint"
   // Order matters: "Hint warning" must come before "Hint" to match correctly
-  COMPILER_MSG_PATTERN = '^(.+\.(?:pas|dpr|dpk|inc))\((\d+)(?:,(\d+))?\):\s*(Fatal|Error|Warning|Hint\s*warning|Hint)\s+([A-Z]\d+):\s*(.+?)(?:\s*\[.+\])?$';
+  COMPILER_MSG_PATTERN = '^(.+\.\w+)\((\d+)(?:,(\d+))?\):\s*(Fatal|Error|Warning|Hint\s*warning|Hint)\s+([A-Z]\d+):\s*(.+?)(?:\s*\[.+\])?$';
 
 class function TOutputParser.Parse(const Output: string; MaxErrors: Integer;
   out Truncated: Boolean; out TotalIssuesFound: Integer): TArray<TCompileIssue>;

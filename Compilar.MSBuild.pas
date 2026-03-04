@@ -97,7 +97,9 @@ var
   SI: TStartupInfo;
   PI: TProcessInformation;
   hReadPipe, hWritePipe: THandle;
-  Buffer: array[0..4095] of AnsiChar;
+  Buffer: array[0..4095] of Byte;
+  WideBuffer: string;
+  WideLen: Integer;
   BytesRead: DWORD;
   TotalOutput: TStringBuilder;
   WaitResult: DWORD;
@@ -154,9 +156,15 @@ begin
       TotalOutput := TStringBuilder.Create;
       try
         repeat
-          FillChar(Buffer, SizeOf(Buffer), 0);
-          if ReadFile(hReadPipe, Buffer, SizeOf(Buffer) - 1, BytesRead, nil) and (BytesRead > 0) then
-            TotalOutput.Append(string(AnsiString(Buffer)));
+          if ReadFile(hReadPipe, Buffer, SizeOf(Buffer), BytesRead, nil) and (BytesRead > 0) then
+          begin
+            // Use explicit OEM codepage conversion to avoid codepage mismatch
+            // when running under WSL (MSBuild outputs OEM-encoded text via pipe)
+            WideLen := MultiByteToWideChar(CP_OEMCP, 0, @Buffer[0], BytesRead, nil, 0);
+            SetLength(WideBuffer, WideLen);
+            MultiByteToWideChar(CP_OEMCP, 0, @Buffer[0], BytesRead, PChar(WideBuffer), WideLen);
+            TotalOutput.Append(WideBuffer);
+          end;
         until BytesRead = 0;
 
         Output := TotalOutput.ToString;

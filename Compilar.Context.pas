@@ -39,7 +39,11 @@ begin
       WinPath := TPathUtils.NormalizeToWindows(Issues[I].FilePath);
 
       if FileExists(WinPath) then
+      try
         Issues[I].Context := ReadSourceLines(WinPath, Issues[I].Line, ContextLines);
+      except
+        // Skip context for files with encoding issues
+      end;
     end;
   end;
 end;
@@ -49,19 +53,10 @@ var
   FS: TFileStream;
   BOM: array[0..2] of Byte;
   BytesRead: Integer;
-  Bytes: TBytes;
-  Text: string;
 begin
   FS := TFileStream.Create(FilePath, fmOpenRead or fmShareDenyNone);
   try
     BytesRead := FS.Read(BOM, 3);
-
-    if BytesRead >= 3 then
-    begin
-      // UTF-8 BOM: EF BB BF
-      if (BOM[0] = $EF) and (BOM[1] = $BB) and (BOM[2] = $BF) then
-        Exit(TEncoding.UTF8);
-    end;
 
     if BytesRead >= 2 then
     begin
@@ -73,23 +68,14 @@ begin
       if (BOM[0] = $FE) and (BOM[1] = $FF) then
         Exit(TEncoding.BigEndianUnicode);
     end;
-
-    // No BOM: try UTF-8 first, fall back to ANSI if replacement chars found
-    FS.Position := 0;
-    SetLength(Bytes, FS.Size);
-    if FS.Size > 0 then
-    begin
-      FS.ReadBuffer(Bytes[0], FS.Size);
-      Text := TEncoding.UTF8.GetString(Bytes);
-      if Pos(#$FFFD, Text) > 0 then
-        Exit(TEncoding.ANSI);
-      Exit(TEncoding.UTF8);
-    end;
   finally
     FS.Free;
   end;
 
-  Result := TEncoding.ANSI;
+  // Use UTF-8 for all other files (with or without BOM).
+  // Delphi source files are either UTF-8 or pure ASCII (which is valid UTF-8).
+  // Avoids TEncoding.ANSI which depends on the system codepage and fails under WSL.
+  Result := TEncoding.UTF8;
 end;
 
 class function TContextEnricher.ReadSourceLines(const FilePath: string;
