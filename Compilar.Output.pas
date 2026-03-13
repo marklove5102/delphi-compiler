@@ -17,6 +17,10 @@ type
     /// Generate JSON for internal error
     class function InternalError(const ErrorMsg: string): string;
 
+    /// Generate JSON for build event failure (prebuild/postbuild)
+    class function BuildEventError(const AEventType: string;
+      const Args: TCompilerArgs; const AEvent: TBuildEventInfo): string;
+
   private
     class function EscapeJSON(const S: string): string;
     class function IssueToJSON(const Issue: TCompileIssue; Indent: Integer): string;
@@ -28,8 +32,8 @@ type
 implementation
 
 uses
-  System.SysUtils, System.Classes,
-  Compilar.Config;
+  System.SysUtils, System.IOUtils, System.Classes,
+  Compilar.Config, Compilar.PathUtils;
 
 const
   INDENT_SIZE = 2;
@@ -228,6 +232,35 @@ begin
       SB.Append(P1).Append('"config_warnings": ').Append(StringArrayToJSON(Config.Warnings, 1)).Append(',').Append(NL);
     end;
 
+    // Build events (if executed)
+    if AResult.PreBuildEvent.Executed then
+    begin
+      SB.Append(P1).Append('"pre_build_event": {').Append(NL);
+      SB.Append(P2).Append('"command": "').Append(EscapeJSON(AResult.PreBuildEvent.Command)).Append('",').Append(NL);
+      SB.Append(P2).Append('"exit_code": ').Append(IntToStr(AResult.PreBuildEvent.ExitCode));
+      if AResult.PreBuildEvent.Output <> '' then
+      begin
+        SB.Append(',').Append(NL);
+        SB.Append(P2).Append('"output": "').Append(EscapeJSON(AResult.PreBuildEvent.Output)).Append('"');
+      end;
+      SB.Append(NL);
+      SB.Append(P1).Append('},').Append(NL);
+    end;
+
+    if AResult.PostBuildEvent.Executed then
+    begin
+      SB.Append(P1).Append('"post_build_event": {').Append(NL);
+      SB.Append(P2).Append('"command": "').Append(EscapeJSON(AResult.PostBuildEvent.Command)).Append('",').Append(NL);
+      SB.Append(P2).Append('"exit_code": ').Append(IntToStr(AResult.PostBuildEvent.ExitCode));
+      if AResult.PostBuildEvent.Output <> '' then
+      begin
+        SB.Append(',').Append(NL);
+        SB.Append(P2).Append('"output": "').Append(EscapeJSON(AResult.PostBuildEvent.Output)).Append('"');
+      end;
+      SB.Append(NL);
+      SB.Append(P1).Append('},').Append(NL);
+    end;
+
     SB.Append(P1).Append('"time_ms": ').Append(IntToStr(AResult.TimeMs)).Append(',').Append(NL);
     SB.Append(P1).Append('"exit_code": ').Append(IntToStr(AResult.ExitCode)).Append(',').Append(NL);
     SB.Append(P1).Append('"errors": ').Append(IntToStr(AResult.ErrorCount)).Append(',').Append(NL);
@@ -279,6 +312,28 @@ begin
   Result := '{' + NL +
     Pad(1) + '"status": "internal_error",' + NL +
     Pad(1) + '"error": "' + EscapeJSON(ErrorMsg) + '"' + NL +
+    '}';
+end;
+
+class function TJSONOutput.BuildEventError(const AEventType: string;
+  const Args: TCompilerArgs; const AEvent: TBuildEventInfo): string;
+var
+  P1, P2: string;
+begin
+  P1 := Pad(1);
+  P2 := Pad(2);
+  Result := '{' + NL +
+    P1 + '"status": "' + EscapeJSON(AEventType) + '_error",' + NL +
+    P1 + '"project": "' + EscapeJSON(TPath.GetFileName(Args.ProjectPathWin)) + '",' + NL +
+    P1 + '"project_path": "' + EscapeJSON(TPathUtils.NormalizeForOutput(Args.ProjectPathWin)) + '",' + NL +
+    P1 + '"config": "' + EscapeJSON(Args.ConfigStr) + '",' + NL +
+    P1 + '"platform": "' + EscapeJSON(Args.PlatformStr) + '",' + NL +
+    P1 + '"build_event": {' + NL +
+    P2 + '"type": "' + EscapeJSON(AEventType) + '",' + NL +
+    P2 + '"command": "' + EscapeJSON(AEvent.Command) + '",' + NL +
+    P2 + '"exit_code": ' + IntToStr(AEvent.ExitCode) + ',' + NL +
+    P2 + '"output": "' + EscapeJSON(AEvent.Output) + '"' + NL +
+    P1 + '}' + NL +
     '}';
 end;
 

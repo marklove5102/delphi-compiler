@@ -56,6 +56,15 @@ type
     function PlatformStr: string;
   end;
 
+  /// Build event execution result (prebuild/postbuild)
+  TBuildEventInfo = record
+    Command: string;
+    Output: string;
+    ExitCode: Integer;
+    Executed: Boolean;
+    Success: Boolean;
+  end;
+
   /// Final compilation result
   TCompileResult = record
     Status: string;            // ok, hints, warnings, error, invalid, internal_error
@@ -66,6 +75,8 @@ type
     OutputPath: string;        // Path to compiled binary (Linux format)
     OutputStale: Boolean;      // True if output file was not updated (likely locked)
     OutputMessage: string;     // Human-readable explanation when OutputStale
+    PreBuildEvent: TBuildEventInfo;
+    PostBuildEvent: TBuildEventInfo;
     TimeMs: Int64;
     ExitCode: Integer;         // MSBuild exit code
     ErrorCount: Integer;
@@ -124,6 +135,8 @@ begin
   Result.HintCount := 0;
   Result.OutputPath := '';
   Result.OutputStale := False;
+  Result.PreBuildEvent.Executed := False;
+  Result.PostBuildEvent.Executed := False;
 
   // Count issues by type
   for Issue in AIssues do

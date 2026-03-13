@@ -15,7 +15,8 @@ uses
   Compilar.Lookup in 'Compilar.Lookup.pas',
   Compilar.Context in 'Compilar.Context.pas',
   Compilar.ProjectInfo in 'Compilar.ProjectInfo.pas',
-  Compilar.Output in 'Compilar.Output.pas';
+  Compilar.Output in 'Compilar.Output.pas',
+  Compilar.BuildEvents in 'Compilar.BuildEvents.pas';
 
   procedure WriteStdout(const S: string);
   var
@@ -52,6 +53,10 @@ var
   CompileStartTime: TDateTime;
   OutputWinPath: string;
   OutputFileTime: TDateTime;
+  LPreBuildCmd: string;
+  LPostBuildCmd: string;
+  LProjectDir: string;
+  LEventResult: TBuildEventInfo;
 begin
 
   try
@@ -65,6 +70,24 @@ begin
 
     // 2. Initialize config (env file, env vars, auto-detection)
     InitConfig(Args.ProjectPathWin, Args.WSLMode);
+
+    // 2b. Parse and run pre-build event
+    LProjectDir := ExtractFilePath(Args.ProjectPathWin);
+    LPreBuildCmd := TBuildEvents.GetPreBuildEvent(
+      Args.ProjectPathWin, Args.ConfigStr, Args.PlatformStr);
+    LPostBuildCmd := TBuildEvents.GetPostBuildEvent(
+      Args.ProjectPathWin, Args.ConfigStr, Args.PlatformStr);
+
+    if not LPreBuildCmd.IsEmpty then
+    begin
+      LEventResult := TBuildEvents.Execute(LPreBuildCmd, LProjectDir);
+      if not LEventResult.Success then
+      begin
+        WriteStdout(TJSONOutput.BuildEventError('prebuild', Args, LEventResult));
+        ExitCode := 0;
+        Exit;
+      end;
+    end;
 
     // 3. Run MSBuild (with timing)
     CompileStartTime := Now;
@@ -119,6 +142,17 @@ begin
             Result.Status := 'output_locked';
         end;
       end;
+    end;
+
+    // 7c. Store PreBuild event info
+    if not LPreBuildCmd.IsEmpty then
+      Result.PreBuildEvent := LEventResult;
+
+    // 7d. Run PostBuild event (only if compilation succeeded)
+    if (not LPostBuildCmd.IsEmpty) and (Result.ErrorCount = 0) then
+    begin
+      LEventResult := TBuildEvents.Execute(LPostBuildCmd, LProjectDir);
+      Result.PostBuildEvent := LEventResult;
     end;
 
     // 8. Output JSON

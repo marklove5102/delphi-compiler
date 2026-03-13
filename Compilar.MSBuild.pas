@@ -86,7 +86,7 @@ begin
   // Build the command line
   // We use cmd /c to run rsvars.bat first, then MSBuild
   Result := Format(
-    'cmd.exe /c "call "%s" && MSBuild.exe "%s" /t:rebuild /p:Config=%s /p:Platform=%s /v:normal %s"',
+    'cmd.exe /c "call "%s" && MSBuild.exe "%s" /t:rebuild /p:Config=%s /p:Platform=%s /p:PreBuildEvent= /p:PostBuildEvent= /v:normal %s"',
     [RSVars, Args.ProjectPathWin, Args.ConfigStr, Args.PlatformStr, ExtraProps]);
 end;
 

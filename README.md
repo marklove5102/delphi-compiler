@@ -4,11 +4,13 @@ A command-line wrapper around MSBuild for Delphi projects that produces structur
 
 ## What it does
 
-1. Invokes MSBuild via RAD Studio's `rsvars.bat` to compile a `.dproj` project
-2. Parses the compiler output (errors, warnings, hints)
-3. Enriches each issue with source code context around the error line
-4. Optionally looks up undeclared identifiers and missing files
-5. Outputs everything as a single JSON object to stdout
+1. Runs PreBuild events from the `.dproj` (if defined)
+2. Invokes MSBuild via RAD Studio's `rsvars.bat` to compile a `.dproj` project
+3. Runs PostBuild events (if defined, only on successful compilation)
+4. Parses the compiler output (errors, warnings, hints)
+5. Enriches each issue with source code context around the error line
+6. Optionally looks up undeclared identifiers and missing files
+7. Outputs everything as a single JSON object to stdout
 
 ## Usage
 
@@ -111,6 +113,7 @@ delphi-compiler.exe W:\MyProject\MyProject.dproj --config=Release --max-errors=5
 | `hints` | Compiled successfully, only hints |
 | `warnings` | Compiled successfully, warnings present |
 | `error` | Compilation failed |
+| `prebuild_error` | PreBuild event failed (compilation not attempted) |
 | `invalid` | Bad command-line arguments |
 | `internal_error` | Unexpected failure (MSBuild not found, etc.) |
 
@@ -194,6 +197,7 @@ Compilar.Parser.pas           Compiler output parsing
 Compilar.PathUtils.pas        Linux/Windows path conversion (WSL support)
 Compilar.ProjectInfo.pas      .dproj parsing and output path resolution
 Compilar.Types.pas            Type definitions
+Compilar.BuildEvents.pas      PreBuild/PostBuild event parsing and execution
 ```
 
 ## License

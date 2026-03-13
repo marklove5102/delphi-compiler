@@ -1,5 +1,22 @@
 ﻿# Changelog
 
+## v1.4 - 2026-03-13
+
+- Add PreBuild/PostBuild event support (contributed by [ertang](https://en.delphipraxis.net/))
+  - Parses `<PreBuildEvent>` and `<PostBuildEvent>` from `.dproj` PropertyGroups
+  - Executes pre-build before MSBuild; aborts with `prebuild_error` status on failure
+  - Executes post-build after MSBuild only if compilation succeeded
+  - MSBuild native events suppressed via `/p:PreBuildEvent= /p:PostBuildEvent=` to avoid double execution
+  - PropertyGroup condition matching with priority: Config+Platform > Config > Base+Platform > Base
+  - Build event results included in JSON output (`pre_build_event`, `post_build_event` fields)
+- New unit: `Compilar.BuildEvents.pas`
+- Fixes applied during integration:
+  - Initialize `TBuildEventInfo.Executed` to `False` in `TCompileResult.Create` (prevents garbage JSON for projects without build events)
+  - Temp `.bat` cleanup in `finally` block (was leaked on `CreateProcess` failure)
+  - Unique temp `.bat` filename using PID (prevents corruption under concurrent compilation)
+  - Multi-line events joined with line breaks instead of `&&` (preserves MSBuild semantics)
+  - Pre-build event output included in JSON (was silently dropped)
+
 ## v1.3 - 2026-03-04
 
 - Fix Unicode/codepage failures when running under WSL
