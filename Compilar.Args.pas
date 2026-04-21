@@ -65,9 +65,9 @@ begin
   end
   else
   begin
-    // Assume it's a Windows path without validation
-    Args.ProjectPathWin := Args.ProjectPath;
-    Args.ProjectPath := TPathUtils.WindowsToLinux(Args.ProjectPath);
+    // Mixed or non-standard path — normalize slashes first, then treat as Windows
+    Args.ProjectPathWin := StringReplace(Args.ProjectPath, '/', '\', [rfReplaceAll]);
+    Args.ProjectPath := TPathUtils.WindowsToLinux(Args.ProjectPathWin);
   end;
 
   // Parse remaining arguments

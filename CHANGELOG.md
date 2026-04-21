@@ -1,5 +1,11 @@
 ﻿# Changelog
 
+## v1.5 - 2026-04-20
+
+- Fix mixed-slash Windows path handling in argument parser (`Compilar.Args.pas`)
+- Paths like `W:/folder/file.dproj` (forward slashes with drive letter) now normalize correctly: `ProjectPathWin` gets backslashes and `ProjectPath` derives from the fixed form
+- Previously `IsWindowsPath` required `Path[3] = '\'`, so mixed-slash inputs fell through to the else branch and both paths were stored malformed
+
 ## v1.4 - 2026-03-13
 
 - Add PreBuild/PostBuild event support (contributed by [ertang](https://en.delphipraxis.net/))
